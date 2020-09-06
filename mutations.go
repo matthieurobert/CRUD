@@ -1,8 +1,8 @@
 package main
 
 import (
+	"fmt"
 	"github.com/graphql-go/graphql"
-	"math/rand"
 )
 
 var mutationType = graphql.NewObject(
@@ -27,13 +27,15 @@ var mutationType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					user := User{
-						ID:       int64(rand.Intn(100000)),
-						Username: params.Args["username"].(string),
-						Mail:     params.Args["mail"].(string),
-						Password: params.Args["password"].(string),
+					sqlStatement := `
+					INSERT INTO users (username, mail, password) 
+					VALUES ($1, $2, $3)`
+					db := postgres()
+					_, err := db.Exec(sqlStatement, params.Args["username"].(string), params.Args["mail"].(string), params.Args["password"].(string))
+					if err != nil {
+						panic(err)
 					}
-					users = append(users, user)
+
 					return user, nil
 				},
 			},
@@ -59,23 +61,50 @@ var mutationType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					db := postgres()
 					id, _ := params.Args["id"].(int)
 					username, usernameOK := params.Args["username"].(string)
 					mail, mailOK := params.Args["mail"].(string)
 					password, passwordOK := params.Args["password"].(string)
 					user := User{}
-					for i, p := range users {
-						if int64(id) == p.ID {
+
+					var idMax int
+					db.QueryRow("SELECT MAX(id) FROM users").Scan(&idMax)
+
+					fmt.Println(idMax)
+
+					for i := 0; i <= idMax; i++ {
+						if id == i {
 							if usernameOK {
-								users[i].Username = username
+								sqlStatement := `
+								UPDATE users
+								SET username = $2
+								WHERE id = $1;`
+								_, err := db.Exec(sqlStatement, id, username)
+								if err != nil {
+									panic(err)
+								}
 							}
 							if mailOK {
-								users[i].Mail = mail
+								sqlStatement := `
+								UPDATE users
+								SET mail = $2
+								WHERE id = $1;`
+								_, err := db.Exec(sqlStatement, id, mail)
+								if err != nil {
+									panic(err)
+								}
 							}
 							if passwordOK {
-								users[i].Password = password
+								sqlStatement := `
+								UPDATE users
+								SET password = $2
+								WHERE id = $1;`
+								_, err := db.Exec(sqlStatement, id, password)
+								if err != nil {
+									panic(err)
+								}
 							}
-							user = users[i]
 							break
 						}
 					}
@@ -95,12 +124,22 @@ var mutationType = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					db := postgres()
 					id, _ := params.Args["id"].(int)
 					user := User{}
-					for i, p := range users {
-						if int64(id) == p.ID {
-							user = users[i]
-							users = append(users[:i], users[i+1:]...)
+
+					var idMax int
+					db.QueryRow("SELECT MAX(id) FROM users").Scan(&idMax)
+
+					for i := 1; i <= idMax; i++ {
+						if id == i {
+							sqlStatement := `
+							DELETE FROM users
+							WHERE id = $1;`
+							_, err := db.Exec(sqlStatement, i)
+							if err != nil {
+								panic(err)
+							}
 						}
 					}
 

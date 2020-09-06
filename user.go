@@ -12,15 +12,6 @@ type User struct {
 	Password string `json:"password"`
 }
 
-var users = []User{
-	{
-		ID:       1,
-		Username: "Aynbo",
-		Mail:     "admin@exemple.com",
-		Password: "1234",
-	},
-}
-
 // Création de l'objet user dans graphql
 var userType = graphql.NewObject(
 	graphql.ObjectConfig{

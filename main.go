@@ -32,6 +32,9 @@ func main() {
 		fmt.Println(r.URL.Path)
 	})
 
+	postgres()
+
 	fmt.Println("Server is running on port 8000")
 	http.ListenAndServe(":8000", nil)
+
 }
